@@ -12,15 +12,14 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [rankings, setRankings] = useState<RankingWithPlayer[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [registering, setRegistering] = useState<string | null>(null);
-  const [nickname, setNickname] = useState('');
+    const [nickname, setNickname] = useState('');
   const [platform, setPlatform] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const pixKey = localStorage.getItem('cyberplay_pix_key') || 'pix@cyberplay.com';
-  const pixName = localStorage.getItem('cyberplay_pix_name') || 'Cyberplay Torneios';
-  const whatsappNumber = localStorage.getItem('cyberplay_whatsapp_number') || '';
-  const pixInstructions = localStorage.getItem('cyberplay_pix_instructions') || 'Faça o pagamento via PIX e envie o comprovante pelo WhatsApp.';
+  const [pixKey, setPixKey] = useState('pix@cyberplay.com');
+  const [pixName, setPixName] = useState('Cyberplay Torneios');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [pixInstructions, setPixInstructions] = useState('Faça o pagamento via PIX e envie o comprovante pelo WhatsApp.');
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixKey)}`;
   const whatsappQrUrl = whatsappNumber
@@ -37,21 +36,32 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
 
   useEffect(() => {
     fetchData();
-    loadSponsors();
+    loadSettings();
+
+    const channel = supabase.channel('public_changes')
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        fetchData();
+        loadSettings();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  function loadSponsors() {
-    try {
-      const data = localStorage.getItem('cyberplay_sponsors');
-      if (data) {
-        setSponsors(JSON.parse(data));
-      } else {
-        setSponsors([]);
-      }
-    } catch (e) {
-      setSponsors([]);
+  async function loadSettings() {
+    const { data } = await supabase.from('settings').select('*').eq('id', 'global').single();
+    if (data) {
+      setPixKey(data.pixKey || 'pix@cyberplay.com');
+      setPixName(data.pixName || 'Cyberplay Torneios');
+      setWhatsappNumber(data.whatsappNumber || '');
+      setPixInstructions(data.pixInstructions || 'Faça o pagamento via PIX e envie o comprovante pelo WhatsApp.');
+      setSponsors(data.sponsors || []);
     }
   }
+
+  
 
   function handleCopyPixKey() {
     navigator.clipboard.writeText(pixKey);
@@ -125,7 +135,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
     }]);
     if (error) console.error('Error registering:', error);
     else {
-      setRegistering(null);
+      
       setRegisteredSuccess(true);
       setTimeout(() => setRegisteredSuccess(false), 8000);
     }
@@ -411,22 +421,17 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                   </div>
                 </div>
 
-                {registering === t.id ? (
-                  <div className="space-y-3 pt-4 border-t border-gray-800">
-                    <div className="p-3 bg-[#050505] border border-gray-800 rounded-xl space-y-2 text-center">
-                      <p className="text-xs text-[#39FF14] font-bold">Instruções para Inscrição:</p>
-                      <p className="text-xs text-gray-400">Faça o PIX para a chave abaixo e insira seu Nickname:</p>
-                      <p className="font-mono text-xs text-[#39FF14] font-bold bg-[#111] p-1.5 rounded border border-gray-800 select-all">{pixKey}</p>
-                      <img src={qrCodeUrl} alt="QR Code PIX" className="w-28 h-28 bg-white p-1 rounded-lg mx-auto border border-gray-700" />
-                    </div>
-                    <input type="text" placeholder="Seu Nickname no jogo" className="w-full bg-[#050505] border border-gray-700 p-3 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]" onChange={e => setNickname(e.target.value)} />
-                    <input type="text" placeholder="Plataforma (ex: PC, PS5, Xbox)" className="w-full bg-[#050505] border border-gray-700 p-3 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]" onChange={e => setPlatform(e.target.value)} />
-                    <button className="w-full bg-[#39FF14] text-black font-black p-3 rounded-lg text-sm hover:brightness-110 cursor-pointer" onClick={() => register(t.id)}>ENVIAR INSCRIÇÃO</button>
-                    <button className="w-full text-xs text-gray-500 hover:text-white pt-1" onClick={() => setRegistering(null)}>Cancelar</button>
-                  </div>
-                ) : (
-                  <button className="w-full bg-white text-black font-bold p-3 rounded-xl text-sm hover:bg-gray-200 transition cursor-pointer mt-2" onClick={() => setRegistering(t.id)}>Garantir Vaga</button>
-                )}
+                
+                <button
+                  className="w-full bg-[#39FF14] text-black font-black p-3 rounded-xl text-sm hover:brightness-110 transition cursor-pointer mt-2"
+                  onClick={() => {
+                    setSelectedTournamentId(t.id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  Garantir Vaga
+                </button>
+
               </div>
             ))}
           </div>

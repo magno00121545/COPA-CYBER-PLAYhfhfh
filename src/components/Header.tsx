@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Download, LogOut } from 'lucide-react';
 import { generateSocialMediaPDF } from '../lib/pdfExport';
+import { exportDatabaseJSON } from '../lib/supabase';
 
 interface HeaderProps {
   activeTab: string;
@@ -52,7 +53,29 @@ export default function Header({ activeTab, onLogout }: HeaderProps) {
 
         {onLogout && (
           <button
-            onClick={onLogout}
+            onClick={async () => {
+              if (confirm('Deseja fazer o download de um Backup do sistema antes de sair?')) {
+                try {
+                  const data = await exportDatabaseJSON();
+                  const blob = new Blob([data], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `cyberplay_backup_${new Date().toISOString().split('T')[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  // Allow browser to download before logout
+                  setTimeout(onLogout, 500);
+                } catch(e) {
+                  console.error(e);
+                  onLogout();
+                }
+              } else {
+                onLogout();
+              }
+            }}
             title="Sair da área administrativa"
             className="p-2 bg-red-950/40 border border-red-800/50 hover:bg-red-900/60 text-red-400 hover:text-white rounded-lg transition cursor-pointer flex items-center gap-1.5 text-xs font-bold"
           >

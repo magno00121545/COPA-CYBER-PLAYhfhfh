@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { clearAllDatabaseData } from '../lib/supabase';
-import { Trash2, AlertTriangle, CheckCircle2, MessageCircle, Award, Plus, ExternalLink, Star } from 'lucide-react';
+import { clearAllDatabaseData, supabase, exportDatabaseJSON, importDatabaseJSON } from '../lib/supabase';
+import { Trash2, AlertTriangle, CheckCircle2, MessageCircle, Award, Plus, ExternalLink, Save, Download, Upload } from 'lucide-react';
 
 export interface Sponsor {
   id: string;
@@ -11,32 +11,70 @@ export interface Sponsor {
   logoUrl?: string;
 }
 
-function SponsorsManager() {
+export default function SettingsView() {
+  const [pixKey, setPixKey] = useState('');
+  const [pixName, setPixName] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [pixInstructions, setPixInstructions] = useState('');
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [saved, setSaved] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+
+  // Sponsor form state
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Patrocinador Master');
   const [website, setWebsite] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
-  const [addedSuccess, setAddedSuccess] = useState(false);
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSponsors();
+    loadSettings();
   }, []);
 
-  function loadSponsors() {
-    try {
-      const data = localStorage.getItem('cyberplay_sponsors');
-      if (data) {
-        setSponsors(JSON.parse(data));
-      } else {
-        setSponsors([]);
-      }
-    } catch (e) {
-      setSponsors([]);
+  async function loadSettings() {
+    const { data } = await supabase.from('settings').select('*').eq('id', 'global').single();
+    if (data) {
+      setPixKey(data.pixKey || '');
+      setPixName(data.pixName || '');
+      setWhatsappNumber(data.whatsappNumber || '');
+      setPixInstructions(data.pixInstructions || '');
+      setSponsors(data.sponsors || []);
     }
+    setLoading(false);
   }
 
-  function handleAddSponsor(e: FormEvent) {
+  async function handleSaveSettings() {
+    await supabase.from('settings').update({
+      pixKey,
+      pixName,
+      whatsappNumber,
+      pixInstructions,
+      sponsors
+    }).eq('id', 'global');
+
+    const { data } = await supabase.from('settings').select('*').eq('id', 'global').single();
+    if (!data) {
+        await supabase.from('settings').insert({
+            id: 'global',
+            pixKey,
+            pixName,
+            whatsappNumber,
+            pixInstructions,
+            sponsors
+        });
+    }
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  }
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    await handleSaveSettings();
+  }
+
+  async function handleAddSponsor(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -50,181 +88,25 @@ function SponsorsManager() {
 
     const updated = [...sponsors, newSponsor];
     setSponsors(updated);
-    localStorage.setItem('cyberplay_sponsors', JSON.stringify(updated));
+    
+    // Save to DB
+    await supabase.from('settings').update({ sponsors: updated }).eq('id', 'global');
+    
+    const { data } = await supabase.from('settings').select('*').eq('id', 'global').single();
+    if (!data) {
+        await supabase.from('settings').insert({ id: 'global', sponsors: updated });
+    }
 
     // Reset form
     setName('');
     setWebsite('');
     setLogoUrl('');
-    setAddedSuccess(true);
-    setTimeout(() => setAddedSuccess(false), 3000);
   }
 
-  function handleDeleteSponsor(id: string) {
+  async function handleDeleteSponsor(id: string) {
     const updated = sponsors.filter(s => s.id !== id);
     setSponsors(updated);
-    localStorage.setItem('cyberplay_sponsors', JSON.stringify(updated));
-  }
-
-  return (
-    <div className="bg-[#111] p-6 rounded-xl border border-gray-800 space-y-6">
-      <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-        <div>
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <Award className="w-6 h-6 text-[#39FF14]" />
-            Gerenciar Patrocinadores & Apoio Oficial
-          </h3>
-          <p className="text-xs text-gray-400 mt-1">
-            Os patrocinadores cadastrados aqui serão exibidos em destaque no rodapé da tela inicial para todos os participantes.
-          </p>
-        </div>
-      </div>
-
-      {/* Form de Cadastro de Patrocinador */}
-      <form onSubmit={handleAddSponsor} className="bg-[#080808] p-4 rounded-xl border border-gray-800 space-y-4">
-        <h4 className="text-sm font-bold text-[#39FF14] uppercase tracking-wider flex items-center gap-1.5">
-          <Plus className="w-4 h-4" /> Cadastrar Novo Patrocinador
-        </h4>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-300 mb-1">Nome da Empresa / Patrocinador *</label>
-            <input
-              type="text"
-              required
-              placeholder="Ex: Arena E-Sports, GameStation..."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-300 mb-1">Categoria / Nível</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
-            >
-              <option value="Patrocinador Master">Patrocinador Master</option>
-              <option value="Apoio Oficial">Apoio Oficial</option>
-              <option value="Parceiro Premier">Parceiro Premier</option>
-              <option value="Media Partner">Media Partner</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-300 mb-1">Link / Instagram / Website (Opcional)</label>
-            <input
-              type="url"
-              placeholder="Ex: https://instagram.com/patrocinador"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-300 mb-1">URL da Logomarca (Opcional)</label>
-            <input
-              type="url"
-              placeholder="Ex: https://link-da-imagem.com/logo.png"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
-            />
-          </div>
-        </div>
-
-        {addedSuccess && (
-          <div className="p-2.5 bg-green-950/80 border border-green-500 text-green-300 rounded-lg text-xs font-bold">
-            ✓ Patrocinador adicionado com sucesso!
-          </div>
-        )}
-
-        <button
-          type="submit"
-          className="bg-[#39FF14] text-black font-black px-5 py-2.5 rounded-lg hover:brightness-110 transition cursor-pointer text-xs flex items-center justify-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>ADICIONAR PATROCINADOR</span>
-        </button>
-      </form>
-
-      {/* Lista de Patrocinadores Cadastrados */}
-      <div className="space-y-3">
-        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-          Patrocinadores Ativos ({sponsors.length})
-        </h4>
-
-        {sponsors.length === 0 ? (
-          <p className="text-xs text-gray-500 italic bg-[#050505] p-4 rounded-lg border border-gray-800 text-center">
-            Nenhum patrocinador cadastrado ainda. Preencha o formulário acima para adicionar os parceiros do seu torneio.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {sponsors.map(sp => (
-              <div key={sp.id} className="bg-[#050505] p-4 rounded-xl border border-gray-800 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {sp.logoUrl ? (
-                    <img src={sp.logoUrl} alt={sp.name} className="w-10 h-10 object-contain rounded bg-black p-1 border border-gray-800" />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] font-black flex items-center justify-center text-sm">
-                      {sp.name[0].toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <h5 className="font-bold text-white text-sm">{sp.name}</h5>
-                    <span className="text-[10px] bg-gray-800 text-[#39FF14] font-bold px-2 py-0.5 rounded border border-gray-700">
-                      {sp.category}
-                    </span>
-                    {sp.website && (
-                      <a href={sp.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 block hover:underline flex items-center gap-1 mt-0.5">
-                        <ExternalLink className="w-2.5 h-2.5" /> {sp.website}
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleDeleteSponsor(sp.id)}
-                  className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition cursor-pointer"
-                  title="Excluir patrocinador"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function SettingsView() {
-  const [pixKey, setPixKey] = useState('');
-  const [pixName, setPixName] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [pixInstructions, setPixInstructions] = useState('');
-  const [saved, setSaved] = useState(false);
-  const [resetDone, setResetDone] = useState(false);
-
-  useEffect(() => {
-    setPixKey(localStorage.getItem('cyberplay_pix_key') || '');
-    setPixName(localStorage.getItem('cyberplay_pix_name') || '');
-    setWhatsappNumber(localStorage.getItem('cyberplay_whatsapp_number') || '');
-    setPixInstructions(localStorage.getItem('cyberplay_pix_instructions') || 'Após fazer o PIX, envie seu comprovante pelo WhatsApp e informe seu Nickname.');
-  }, []);
-
-  function handleSave(e: FormEvent) {
-    e.preventDefault();
-    localStorage.setItem('cyberplay_pix_key', pixKey);
-    localStorage.setItem('cyberplay_pix_name', pixName);
-    localStorage.setItem('cyberplay_whatsapp_number', whatsappNumber);
-    localStorage.setItem('cyberplay_pix_instructions', pixInstructions);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    await supabase.from('settings').update({ sponsors: updated }).eq('id', 'global');
   }
 
   function handleResetAllData() {
@@ -233,6 +115,44 @@ export default function SettingsView() {
       setResetDone(true);
       setTimeout(() => setResetDone(false), 4000);
     }
+  }
+
+  async function handleBackup() {
+    try {
+      const data = await exportDatabaseJSON();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cyberplay_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Erro ao gerar backup: ' + e);
+    }
+  }
+
+  async function handleRestore(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (confirm('ATENÇÃO: Restaurar um backup irá substituir TODOS os dados atuais. Deseja continuar?')) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const jsonStr = event.target?.result as string;
+          await importDatabaseJSON(jsonStr);
+          alert('Backup restaurado com sucesso! Recarregando sistema...');
+          window.location.reload();
+        } catch (error) {
+          alert('Erro ao restaurar backup: arquivo inválido.');
+        }
+      };
+      reader.readAsText(file);
+    }
+    e.target.value = '';
   }
 
   function getWhatsAppLink() {
@@ -249,6 +169,10 @@ export default function SettingsView() {
   const whatsappQrUrl = whatsappNumber
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getWhatsAppLink())}`
     : '';
+
+  if (loading) {
+    return <div className="text-white p-4">Carregando configurações...</div>;
+  }
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -313,20 +237,138 @@ export default function SettingsView() {
 
         {saved && (
           <div className="p-3 bg-green-950/80 border border-green-500 text-green-300 rounded-lg text-sm font-bold">
-            ✓ Configurações do PIX salvas com sucesso!
+            ✓ Configurações do PIX salvas com sucesso no banco de dados!
           </div>
         )}
 
         <button
           type="submit"
-          className="w-full bg-[#39FF14] text-black font-black p-3 rounded-lg hover:brightness-110 transition cursor-pointer"
+          className="w-full bg-[#39FF14] text-black font-black p-3 rounded-lg hover:brightness-110 transition cursor-pointer flex items-center justify-center gap-2"
         >
-          SALVAR CHAVE PIX
+          <Save className="w-5 h-5" />
+          SALVAR CHAVE PIX E INSTRUÇÕES
         </button>
       </form>
 
       {/* Seção de Patrocinadores & Apoio */}
-      <SponsorsManager />
+      <div className="bg-[#111] p-6 rounded-xl border border-gray-800 space-y-6">
+        <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+          <div>
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Award className="w-6 h-6 text-[#39FF14]" />
+              Gerenciar Patrocinadores & Apoio Oficial
+            </h3>
+            <p className="text-xs text-gray-400 mt-1">
+              Os patrocinadores cadastrados aqui serão exibidos em destaque no rodapé da tela inicial para todos os participantes.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleAddSponsor} className="bg-[#080808] p-4 rounded-xl border border-gray-800 space-y-4">
+          <h4 className="text-sm font-bold text-[#39FF14] uppercase tracking-wider flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> Cadastrar Novo Patrocinador
+          </h4>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1">Nome da Empresa / Patrocinador *</label>
+              <input
+                type="text"
+                required
+                placeholder="Ex: Arena E-Sports, GameStation..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1">Categoria / Nível</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
+              >
+                <option value="Patrocinador Master">Patrocinador Master</option>
+                <option value="Apoio Oficial">Apoio Oficial</option>
+                <option value="Parceiro Premier">Parceiro Premier</option>
+                <option value="Media Partner">Media Partner</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1">Link / Instagram / Website (Opcional)</label>
+              <input
+                type="url"
+                placeholder="Ex: https://instagram.com/patrocinador"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1">URL da Logomarca (Opcional)</label>
+              <input
+                type="url"
+                placeholder="Ex: https://link-da-imagem.com/logo.png"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                className="w-full bg-[#111] border border-gray-700 p-2.5 rounded-lg text-sm text-white focus:outline-none focus:border-[#39FF14]"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="bg-[#39FF14] text-black font-black px-5 py-2.5 rounded-lg hover:brightness-110 transition cursor-pointer text-xs flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>ADICIONAR PATROCINADOR</span>
+          </button>
+        </form>
+
+        {/* Lista de Patrocinadores Cadastrados */}
+        <div className="space-y-3">
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Patrocinadores Ativos ({sponsors.length})
+          </h4>
+
+          {sponsors.length === 0 ? (
+            <p className="text-xs text-gray-500 italic bg-[#050505] p-4 rounded-lg border border-gray-800 text-center">
+              Nenhum patrocinador cadastrado ainda.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {sponsors.map(sp => (
+                <div key={sp.id} className="bg-[#050505] p-4 rounded-xl border border-gray-800 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {sp.logoUrl ? (
+                      <img src={sp.logoUrl} alt={sp.name} className="w-10 h-10 object-contain rounded bg-black p-1 border border-gray-800" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] font-black flex items-center justify-center text-sm">
+                        {sp.name[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <h5 className="font-bold text-white text-sm">{sp.name}</h5>
+                      <span className="text-[10px] bg-gray-800 text-[#39FF14] font-bold px-2 py-0.5 rounded border border-gray-700">
+                        {sp.category}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteSponsor(sp.id)}
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {(pixKey || whatsappNumber) && (
         <div className="bg-[#111] p-6 rounded-xl border border-gray-800 space-y-6">
@@ -374,6 +416,31 @@ export default function SettingsView() {
         </div>
       )}
 
+      {/* Zona de Backup e Restore */}
+      <div className="bg-[#111] p-6 rounded-xl border border-blue-900/50 space-y-4">
+        <div className="flex items-center gap-2 text-blue-400 font-bold text-lg">
+          <Download className="w-5 h-5" />
+          <h3>Backup e Restauração de Dados</h3>
+        </div>
+        <p className="text-xs text-gray-400">
+          Você pode fazer o download de um backup completo do sistema, ou enviar um arquivo para restaurar todos os dados.
+        </p>
+
+        <div className="flex gap-4">
+          <button
+            onClick={handleBackup}
+            className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-bold px-4 py-3 rounded-lg text-sm transition cursor-pointer flex justify-center items-center gap-2"
+          >
+            <Download className="w-5 h-5" /> GERAR BACKUP COMPLETO
+          </button>
+          
+          <label className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold px-4 py-3 rounded-lg text-sm transition cursor-pointer flex justify-center items-center gap-2">
+            <Upload className="w-5 h-5" /> RESTAURAR BACKUP
+            <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
+          </label>
+        </div>
+      </div>
+
       {/* Zona de Perigo - Limpar e Zerar Sistema */}
       <div className="bg-[#111] p-6 rounded-xl border border-red-900/50 space-y-4">
         <div className="flex items-center gap-2 text-red-400 font-bold text-lg">
@@ -381,7 +448,7 @@ export default function SettingsView() {
           <h3>Zerar Banco de Dados e Sistema</h3>
         </div>
         <p className="text-xs text-gray-400">
-          Esta opção apaga todos os campeonatos, inscrições, jogadores e partidas de teste, deixando o sistema 100% limpo ("zeradinho") para o início dos seus cadastros oficiais.
+          Esta opção apaga todos os campeonatos, inscrições, jogadores e partidas, deixando o sistema 100% limpo ("zeradinho"). Lembre-se de fazer um backup antes se desejar!
         </p>
 
         {resetDone && (

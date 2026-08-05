@@ -181,3 +181,78 @@ export async function generateSocialMediaPDF() {
   // Save the PDF file
   doc.save(`Cyber_Play_Classificacao_Chaveamento_${Date.now()}.pdf`);
 }
+
+export async function generateRegistrationReceiptPDF(registration: any, tournamentName: string) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a5',
+  });
+
+  // Background
+  doc.setFillColor(15, 15, 15);
+  doc.rect(0, 0, 148, 210, 'F');
+
+  // Title
+  doc.setTextColor(57, 255, 20);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('CYBER PLAY ESPORTS', 14, 20);
+  
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text('COMPROVANTE DE INSCRIÇÃO', 14, 28);
+  
+  // Line separator
+  doc.setDrawColor(57, 255, 20);
+  doc.setLineWidth(0.5);
+  doc.line(14, 32, 134, 32);
+  
+  // Details
+  let currentY = 45;
+  
+  const addField = (label: string, value: string) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(10);
+    doc.text(label, 14, currentY);
+    
+    currentY += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text(value, 14, currentY);
+    currentY += 10;
+  };
+
+  addField('TORNEIO:', tournamentName || 'Torneio Cyber Play');
+  addField('NICKNAME:', registration.nickname || 'N/A');
+  addField('PLATAFORMA:', registration.platform || 'N/A');
+  addField('STATUS:', registration.status || 'Pendente');
+  
+  if (registration.created_at) {
+    const date = new Date(registration.created_at).toLocaleString('pt-BR');
+    addField('DATA DA INSCRIÇÃO:', date);
+  }
+
+  // Footer message
+  currentY += 10;
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(57, 255, 20);
+  doc.setFontSize(9);
+  const msg = registration.status === 'Confirmado' 
+    ? 'Inscrição confirmada. Boa sorte no torneio!' 
+    : 'Aguardando pagamento / validação.';
+  doc.text(msg, 14, currentY);
+  
+  doc.setFillColor(10, 10, 10);
+  doc.rect(0, 195, 148, 15, 'F');
+  
+  doc.setTextColor(57, 255, 20);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.text('Criado por MAGNO THIAGO CYBER GHOST', 14, 202);
+  
+  doc.save(`Comprovante_${registration.nickname || 'Inscricao'}.pdf`);
+}

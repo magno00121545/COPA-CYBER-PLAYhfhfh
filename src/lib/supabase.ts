@@ -196,6 +196,8 @@ export const supabase = {
         
         if (targetTable !== '*') {
            setupFirestoreRealtime(targetTable);
+        } else {
+           ['tournaments', 'players', 'rankings', 'matches', 'tournament_registrations', 'settings'].forEach(t => setupFirestoreRealtime(t));
         }
 
         return {
@@ -212,7 +214,32 @@ export const supabase = {
   },
   auth: {
     getSession: () => Promise.resolve({ data: { session: null } }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    onAuthStateChange: (cb?: any) => ({ data: { subscription: { unsubscribe: () => {} } } }),
     signInWithPassword: () => Promise.resolve({ error: { message: 'Modo local ativado' } }),
   }
 };
+
+export async function exportDatabaseJSON() {
+  const tables = ['tournaments', 'players', 'rankings', 'matches', 'tournament_registrations', 'financial_records', 'settings'];
+  const data: Record<string, any[]> = {};
+  for (const table of tables) {
+    const snapshot = await getDocs(collection(db, table));
+    data[table] = snapshot.docs.map(d => d.data());
+  }
+  return JSON.stringify(data, null, 2);
+}
+
+export async function importDatabaseJSON(jsonStr: string) {
+  const data = JSON.parse(jsonStr);
+  const tables = Object.keys(data);
+  for (const table of tables) {
+    const items = data[table];
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (item.id) {
+          await setDoc(doc(db, table, item.id), item);
+        }
+      }
+    }
+  }
+}

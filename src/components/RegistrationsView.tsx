@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { TournamentRegistration, Tournament } from '../lib/types';
-import { CheckCircle2, XCircle, Trash2, Search, Filter, UserCheck, ShieldAlert, RefreshCw, Clock, BellRing, Radio, MessageCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Trash2, Search, Filter, UserCheck, ShieldAlert, RefreshCw, Clock, BellRing, Radio, MessageCircle, FileText } from 'lucide-react';
+import { generateRegistrationReceiptPDF } from '../lib/pdfExport';
 import { playNewRegistrationSound } from '../lib/audioNotification';
 
 export default function RegistrationsView() {
@@ -360,6 +361,13 @@ export default function RegistrationsView() {
                             <span>Recusar</span>
                           </button>
                         )}
+                        <button
+                          onClick={() => generateRegistrationReceiptPDF(r, tournamentName)}
+                          className="p-1.5 text-gray-500 hover:text-blue-400 transition cursor-pointer rounded-lg hover:bg-blue-950/30"
+                          title="Gerar PDF do Comprovante"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => deleteRegistration(r.id)}
                           disabled={actionLoading === r.id}
