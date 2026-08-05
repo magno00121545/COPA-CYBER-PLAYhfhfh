@@ -104,7 +104,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
 
     if (error) {
       console.error('Error registering:', error);
-      alert('Erro ao enviar inscrição. Tente novamente.');
+      alert('Erro ao enviar inscrição: ' + (error.message || JSON.stringify(error)));
     } else {
       setLastRegisteredNick(submittedNick);
       setRegisteredSuccess(true);
