@@ -1,0 +1,7 @@
+{
+  "name": "Cyber Play",
+  "description": "Professional web platform for eFootball tournament management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
