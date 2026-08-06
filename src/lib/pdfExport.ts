@@ -261,3 +261,174 @@ export async function generateRegistrationReceiptPDF(registration: any, tourname
   
   doc.save(`Comprovante_${registration.nickname || 'Inscricao'}.pdf`);
 }
+
+export async function generateVipCardPDF(member: any) {
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: [53.98, 85.6], // Standard card size
+  });
+
+  drawCardFront(doc, member, 0, 0);
+  
+  doc.addPage();
+  drawCardBack(doc, member, 0, 0);
+
+  doc.save(`Carteirinha_${member.nickname}.pdf`);
+}
+
+export async function generateMultipleVipCardsPDF(members: any[]) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const cardsPerPage = 5;
+
+  for (let i = 0; i < members.length; i += cardsPerPage) {
+    if (i > 0) doc.addPage();
+    const pageMembers = members.slice(i, i + cardsPerPage);
+    pageMembers.forEach((member, index) => {
+      const row = index;
+      const x = 19;
+      const y = 10 + row * 55;
+      
+      // Front and Back side-by-side
+      drawCardFront(doc, member, x, y);
+      
+      // Minimal fold line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineDash([1, 1], 0);
+      doc.line(x + 85.6, y, x + 85.6, y + 53.98);
+      doc.setLineDash([], 0);
+      
+      drawCardBack(doc, member, x + 85.6, y);
+    });
+  }
+
+  doc.save(`Carteirinhas_VIP_SideBySide_${Date.now()}.pdf`);
+}
+
+export async function generateDoubleSidedVipCardsPDF(members: any[]) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const cardsPerPage = 10;
+
+  // Fronts on Page 1
+  const page1Members = members.slice(0, cardsPerPage);
+  page1Members.forEach((member, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = 10 + col * 95;
+      const y = 10 + row * 55;
+      drawCardFront(doc, member, x, y);
+  });
+
+  // Backs on Page 2
+  doc.addPage();
+  page1Members.forEach((member, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = 10 + col * 95;
+      const y = 10 + row * 55;
+      drawCardBack(doc, member, x, y);
+  });
+
+  doc.save(`Carteirinhas_VIP_DoubleSided_${Date.now()}.pdf`);
+}
+
+function drawCardFront(doc: any, member: any, x: number, y: number) {
+  // Background
+  if (member.background_image_url) {
+    try {
+      doc.addImage(member.background_image_url, 'JPEG', x, y, 85.6, 53.98);
+    } catch (e) {
+      doc.setFillColor(15, 15, 15);
+      doc.rect(x, y, 85.6, 53.98, 'F');
+    }
+  } else {
+    doc.setFillColor(15, 15, 15);
+    doc.rect(x, y, 85.6, 53.98, 'F');
+  }
+
+  // Border
+  doc.setDrawColor(57, 255, 20);
+  doc.setLineWidth(0.8);
+  doc.rect(x + 2, y + 2, 81.6, 49.98);
+
+  // Title
+  doc.setFillColor(57, 255, 20);
+  doc.rect(x + 2, y + 2, 81.6, 8, 'F');
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('MEMBRO VIP - CYBER PLAY', x + 42.8, y + 7.5, { align: 'center' });
+
+  // Avatar
+  if (member.image_url) {
+    try {
+      doc.addImage(member.image_url, 'JPEG', x + 5, y + 12, 20, 20);
+    } catch (e) {}
+  }
+
+  // Details
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  
+  const startX = x + 30;
+  const startY = y + 18;
+  const lineHeight = 5;
+
+  doc.text(`NOME: ${member.name}`, startX, startY);
+  doc.text(`NICK: ${member.nickname}`, startX, startY + lineHeight);
+  doc.text(`ID: ${member.id_member}`, startX, startY + lineHeight * 2);
+  doc.text(`NASC: ${member.birth_date}`, startX, startY + lineHeight * 3);
+  doc.text(`TIME: ${member.team}`, startX, startY + lineHeight * 4);
+  
+  // Footer
+  doc.setTextColor(57, 255, 20);
+  doc.setFontSize(5);
+  doc.text(`@CyberPlay | ${member.social_media || ''}`, x + 42.8, y + 50, { align: 'center' });
+}
+
+function drawCardBack(doc: any, member: any, x: number, y: number) {
+    // Back side - Simple gamer aesthetic
+    if (member.background_back_image_url) {
+      try {
+        doc.addImage(member.background_back_image_url, 'JPEG', x, y, 85.6, 53.98);
+      } catch (e) {
+        doc.setFillColor(15, 15, 15);
+        doc.rect(x, y, 85.6, 53.98, 'F');
+      }
+    } else if (member.background_image_url) {
+      try {
+        doc.addImage(member.background_image_url, 'JPEG', x, y, 85.6, 53.98);
+      } catch (e) {
+        doc.setFillColor(15, 15, 15);
+        doc.rect(x, y, 85.6, 53.98, 'F');
+      }
+    } else {
+        doc.setFillColor(15, 15, 15);
+        doc.rect(x, y, 85.6, 53.98, 'F');
+    }
+    
+    doc.setDrawColor(57, 255, 20);
+    doc.setLineWidth(0.8);
+    doc.rect(x + 2, y + 2, 81.6, 49.98);
+
+    doc.setTextColor(57, 255, 20);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('CYBER PLAY', x + 42.8, y + 26, { align: 'center' });
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text('VIP MEMBER', x + 42.8, y + 33, { align: 'center' });
+}
+

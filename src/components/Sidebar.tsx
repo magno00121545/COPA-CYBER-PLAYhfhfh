@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { LayoutDashboard, Swords, DollarSign, Users, UserCheck, Trophy, Settings, Radio } from 'lucide-react';
+import { LayoutDashboard, Swords, DollarSign, Users, UserCheck, Trophy, Settings, Radio, CreditCard } from 'lucide-react';
 import { playNewRegistrationSound } from '../lib/audioNotification';
 
 interface SidebarProps {
@@ -66,6 +66,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose }: Si
     { name: 'Ranking', icon: Trophy },
     { name: 'Jogadores', icon: Users },
     { name: 'Financeiro', icon: DollarSign },
+    { name: 'Cartões VIP', icon: CreditCard },
     { name: 'Configurações PIX', icon: Settings },
   ];
 

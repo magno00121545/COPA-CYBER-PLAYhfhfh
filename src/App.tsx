@@ -15,6 +15,7 @@ import AdminLogin from './components/AdminLogin';
 import PublicView from './components/PublicView';
 import RegistrationsView from './components/RegistrationsView';
 import SettingsView from './components/SettingsView';
+import VipCardsView from './components/VipCardsView';
 import { useAuth } from './contexts/AuthContext';
 
 export default function App() {
@@ -62,6 +63,7 @@ export default function App() {
       case 'Inscrições': return <RegistrationsView />;
       case 'Ranking': return <RankingView />;
       case 'Configurações PIX': return <SettingsView />;
+      case 'Cartões VIP': return <VipCardsView />;
       default: return <DashboardView />;
     }
   };
