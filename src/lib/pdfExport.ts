@@ -299,10 +299,10 @@ export async function generateMultipleVipCardsPDF(members: any[]) {
       await drawCardFront(doc, member, x, y);
       
       // Minimal fold line
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineDash([1, 1], 0);
+      (doc as any).setDrawColor(200, 200, 200);
+      (doc as any).setLineDash([1, 1], 0);
       doc.line(x + 85.6, y, x + 85.6, y + 53.98);
-      doc.setLineDash([], 0);
+      (doc as any).setLineDash([], 0);
       
       await drawCardBack(doc, member, x + 85.6, y);
     }

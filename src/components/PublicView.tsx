@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
-import { Tournament, Ranking, Match } from '../lib/types';
-import { Trophy, Medal, Award, Swords, TrendingUp, Target, ShieldCheck, User, UserCheck, Send, CheckCircle2, MessageCircle } from 'lucide-react';
+import { Tournament, Ranking, Match, Penalty, Category } from '../lib/types';
+import { Trophy, Medal, Award, Swords, TrendingUp, Target, ShieldCheck, User, UserCheck, Send, CheckCircle2, MessageCircle, Calendar, Clock, ShieldAlert, AlertTriangle, Gamepad2 } from 'lucide-react';
+import { fetchCategories } from '../lib/categories';
 
 interface RankingWithPlayer extends Ranking {
   players: { nickname: string };
@@ -12,12 +13,17 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [rankings, setRankings] = useState<RankingWithPlayer[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-    const [nickname, setNickname] = useState('');
+  const [penalties, setPenalties] = useState<Penalty[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [selectedPublicCategory, setSelectedPublicCategory] = useState<string>('eFootball');
+  const [nickname, setNickname] = useState('');
   const [platform, setPlatform] = useState('');
   const [copied, setCopied] = useState(false);
 
   const [pixKey, setPixKey] = useState('pix@cyberplay.com');
   const [pixName, setPixName] = useState('Cyberplay Torneios');
+  const [defaultFee, setDefaultFee] = useState('R$ 20,00');
+  const [acceptedPaymentMethods, setAcceptedPaymentMethods] = useState('PIX (Instantâneo), Dinheiro no Local, Cartão');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [whatsappGroupLink, setWhatsappGroupLink] = useState('');
   const [pixInstructions, setPixInstructions] = useState('Faça o pagamento via PIX e envie o comprovante pelo WhatsApp.');
@@ -56,6 +62,8 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
     if (data) {
       setPixKey(data.pixKey || 'pix@cyberplay.com');
       setPixName(data.pixName || 'Cyberplay Torneios');
+      setDefaultFee(data.defaultFee || 'R$ 20,00');
+      setAcceptedPaymentMethods(data.acceptedPaymentMethods || 'PIX (Instantâneo), Dinheiro no Local, Cartão');
       setWhatsappNumber(data.whatsappNumber || '');
       setWhatsappGroupLink(data.whatsappGroupLink || '');
       setPixInstructions(data.pixInstructions || 'Faça o pagamento via PIX e envie o comprovante pelo WhatsApp.');
@@ -82,15 +90,20 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
   }
 
   async function fetchData() {
+    const cats = await fetchCategories();
+    setAvailableCategories(cats);
+
     const { data: tData } = await supabase.from('tournaments').select('*');
     const { data: rData } = await supabase.from('rankings').select('*, players(nickname)');
     const { data: mData } = await supabase.from('matches').select('*');
+    const { data: pnlData } = await supabase.from('penalties').select('*');
     setTournaments(tData || []);
     if (tData && tData.length > 0) {
       setSelectedTournamentId(tData[0].id);
     }
     setRankings((rData as any) || []);
     setMatches(mData || []);
+    setPenalties((pnlData as any) || []);
   }
 
   async function handleDirectRegister(e: FormEvent) {
@@ -143,12 +156,33 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
     }
   }
 
-  const sortedRankings = [...rankings].sort((a, b) => {
+  const filteredRankings = rankings.filter(r => {
+    if (selectedPublicCategory === 'Geral' || selectedPublicCategory === 'Todos') return true;
+    const cat = r.game_category || 'Futebol';
+    if (selectedPublicCategory === 'Futebol') {
+      return cat === 'Futebol' || cat === 'eFootball' || cat.includes('EA FC') || cat.includes('FIFA');
+    }
+    return cat === selectedPublicCategory;
+  });
+
+  const sortedRankings = [...filteredRankings].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
+    const sgB = (b.goals_for || 0) - (b.goals_against || 0);
+    const sgA = (a.goals_for || 0) - (a.goals_against || 0);
+    if (sgB !== sgA) return sgB - sgA;
     return (b.wins || 0) - (a.wins || 0);
   });
 
   const top3 = sortedRankings.slice(0, 3);
+
+  const filteredMatches = matches.filter(m => {
+    if (selectedPublicCategory === 'Geral' || selectedPublicCategory === 'Todos') return true;
+    const cat = m.game_category || 'Futebol';
+    if (selectedPublicCategory === 'Futebol') {
+      return cat === 'Futebol' || cat === 'eFootball' || cat.includes('EA FC') || cat.includes('FIFA');
+    }
+    return cat === selectedPublicCategory;
+  });
 
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-[#39FF14] selection:text-black">
@@ -444,11 +478,19 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                   </div>
                   <div className="text-sm text-gray-400 flex justify-between">
                     <span>Vagas Disponíveis:</span>
-                    <span className="font-bold text-white">{t.max_spots - t.current_spots} / {t.max_spots}</span>
+                    <span className="font-bold text-white">{t.max_spots > 0 ? `${t.max_spots - t.current_spots} / ${t.max_spots}` : 'Ilimitadas'}</span>
                   </div>
-                  <div className="text-sm text-gray-400 flex justify-between">
-                    <span>Taxa de Inscrição:</span>
-                    <span className="font-bold text-[#39FF14]">{t.payment_info}</span>
+                  <div className="bg-[#050505] p-3 rounded-xl border border-gray-800 space-y-1 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Taxa de Inscrição:</span>
+                      <span className="font-black text-[#39FF14] text-sm">{t.entry_fee || t.payment_info || defaultFee}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1 border-t border-gray-800/60">
+                      <span className="text-gray-400">Formas de Pagamento:</span>
+                      <span className="font-bold text-gray-200 text-right truncate max-w-[140px]" title={t.payment_methods || acceptedPaymentMethods}>
+                        {t.payment_methods || acceptedPaymentMethods}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -468,7 +510,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
           </div>
         </section>
 
-        {/* TABELA DE CLASSIFICAÇÃO / RANKING GERAL */}
+        {/* TABELA DE CLASSIFICAÇÃO / RANKING POR CATEGORIA */}
         <section className="space-y-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 border-b border-gray-800 pb-4">
             <div>
@@ -477,10 +519,34 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                 <Trophy className="text-[#39FF14] w-8 h-8" /> Tabela de Classificação
               </h2>
             </div>
-            <div className="flex items-center gap-4 text-xs text-gray-400">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#39FF14]"></span> Vitória: +3 PTS</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500"></span> Empate: +1 PT</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Derrota: 0 PTS</span>
+
+            {/* SELETOR DE CATEGORIA NO PUBLICVIEW */}
+            <div className="flex flex-wrap items-center gap-2">
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat.id || cat.name}
+                  onClick={() => setSelectedPublicCategory(cat.name)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border flex items-center gap-1.5 ${
+                    selectedPublicCategory === cat.name
+                      ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-md font-black'
+                      : 'bg-[#111] text-gray-400 border-gray-800 hover:text-white'
+                  }`}
+                >
+                  <span>{cat.icon || '🎮'}</span>
+                  <span>{cat.name}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => setSelectedPublicCategory('Geral')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border flex items-center gap-1.5 ${
+                  selectedPublicCategory === 'Geral' || selectedPublicCategory === 'Todos'
+                    ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-md font-black'
+                    : 'bg-[#111] text-gray-400 border-gray-800 hover:text-white'
+                }`}
+              >
+                <span>🎮</span>
+                <span>Todos</span>
+              </button>
             </div>
           </div>
 
@@ -497,7 +563,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                     🥈
                   </div>
                   <div className="space-y-1 my-2">
-                    <h4 className="font-black text-lg text-white">{top3[1].players?.nickname || 'Jogador'}</h4>
+                    <h4 className="font-black text-lg text-white">{top3[1].nickname || top3[1].players?.nickname || 'Jogador'}</h4>
                     <p className="text-xs text-gray-400 font-mono">{top3[1].wins || 0} Vitórias</p>
                   </div>
                   <div className="w-full bg-[#161616] p-3 rounded-xl border border-gray-800 flex justify-around text-xs mt-3">
@@ -523,7 +589,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                     🥇
                   </div>
                   <div className="space-y-1 my-2">
-                    <h4 className="font-black text-xl text-white tracking-wide">{top3[0].players?.nickname || 'Campeão'}</h4>
+                    <h4 className="font-black text-xl text-white tracking-wide">{top3[0].nickname || top3[0].players?.nickname || 'Campeão'}</h4>
                     <p className="text-xs text-[#39FF14] font-mono font-bold">{top3[0].wins || 0} Vitórias Invicto</p>
                   </div>
                   <div className="w-full bg-[#050505] p-3 rounded-xl border border-[#39FF14]/30 flex justify-around text-xs mt-3">
@@ -549,7 +615,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                     🥉
                   </div>
                   <div className="space-y-1 my-2">
-                    <h4 className="font-black text-lg text-white">{top3[2].players?.nickname || 'Jogador'}</h4>
+                    <h4 className="font-black text-lg text-white">{top3[2].nickname || top3[2].players?.nickname || 'Jogador'}</h4>
                     <p className="text-xs text-gray-400 font-mono">{top3[2].wins || 0} Vitórias</p>
                   </div>
                   <div className="w-full bg-[#161616] p-3 rounded-xl border border-gray-800 flex justify-around text-xs mt-3">
@@ -576,10 +642,20 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                     <th className="p-4 w-16 text-center">POS</th>
                     <th className="p-4">JOGADOR / NICKNAME</th>
                     <th className="p-4 text-center">PJ</th>
-                    <th className="p-4 text-center text-green-400">VITÓRIAS (V)</th>
-                    <th className="p-4 text-center text-gray-400">EMPATES (E)</th>
-                    <th className="p-4 text-center text-red-400">DERROTAS (D)</th>
-                    <th className="p-4 text-center">APROVEITAMENTO</th>
+                    <th className="p-4 text-center text-green-400">V</th>
+                    <th className="p-4 text-center text-gray-400">E</th>
+                    <th className="p-4 text-center text-red-400">D</th>
+                    
+                    {selectedPublicCategory === 'Futebol' ? (
+                      <>
+                        <th className="p-4 text-center text-blue-400">GP</th>
+                        <th className="p-4 text-center text-amber-400">GC</th>
+                        <th className="p-4 text-center text-[#39FF14]">SG</th>
+                      </>
+                    ) : (
+                      <th className="p-4 text-center">APROVEITAMENTO</th>
+                    )}
+
                     <th className="p-4 text-right pr-6">PONTOS (PTS)</th>
                   </tr>
                 </thead>
@@ -591,6 +667,10 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                     const draws = r.draws || 0;
                     const pj = r.matches_played || (wins + losses + draws) || 0;
                     const winRate = pj > 0 ? Math.round((wins / pj) * 100) : 0;
+                    const gf = r.goals_for || 0;
+                    const ga = r.goals_against || 0;
+                    const sg = gf - ga;
+                    const nick = r.nickname || r.players?.nickname || 'Jogador sem nome';
 
                     let posBadge = null;
                     if (pos === 1) posBadge = <span className="inline-block px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-black text-xs border border-yellow-500/40">🥇 1º</span>;
@@ -607,23 +687,33 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                         <td className="p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center font-bold text-gray-300 text-xs uppercase">
-                              {(r.players?.nickname || 'J')[0]}
+                              {nick[0]}
                             </div>
-                            <span className="font-bold text-white text-base">{r.players?.nickname || 'Jogador sem nome'}</span>
+                            <span className="font-bold text-white text-base">{nick}</span>
                           </div>
                         </td>
                         <td className="p-4 text-center font-bold text-gray-300">{pj}</td>
                         <td className="p-4 text-center font-bold text-green-400 bg-green-950/20">{wins}</td>
                         <td className="p-4 text-center font-bold text-gray-400">{draws}</td>
                         <td className="p-4 text-center font-bold text-red-400 bg-red-950/20">{losses}</td>
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="w-16 bg-gray-800 rounded-full h-2 overflow-hidden hidden sm:block">
-                              <div className="bg-[#39FF14] h-full rounded-full" style={{ width: `${winRate}%` }}></div>
+                        
+                        {selectedPublicCategory === 'Futebol' ? (
+                          <>
+                            <td className="p-4 text-center font-bold text-blue-400">{gf}</td>
+                            <td className="p-4 text-center font-bold text-amber-400">{ga}</td>
+                            <td className="p-4 text-center font-black text-[#39FF14]">{sg > 0 ? `+${sg}` : sg}</td>
+                          </>
+                        ) : (
+                          <td className="p-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-16 bg-gray-800 rounded-full h-2 overflow-hidden hidden sm:block">
+                                <div className="bg-[#39FF14] h-full rounded-full" style={{ width: `${winRate}%` }}></div>
+                              </div>
+                              <span className="font-bold text-xs font-mono text-gray-300">{winRate}%</span>
                             </div>
-                            <span className="font-bold text-xs font-mono text-gray-300">{winRate}%</span>
-                          </div>
-                        </td>
+                          </td>
+                        )}
+
                         <td className="p-4 text-right pr-6 font-black text-lg text-[#39FF14] font-mono">
                           {r.points} <span className="text-xs text-gray-500 font-normal">PTS</span>
                         </td>
@@ -632,8 +722,8 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                   })}
                   {sortedRankings.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-gray-500 italic">
-                        Nenhum jogador classificado no momento.
+                      <td colSpan={selectedPublicCategory === 'Futebol' ? 10 : 8} className="p-8 text-center text-gray-500 italic">
+                        Nenhum jogador classificado nesta categoria no momento.
                       </td>
                     </tr>
                   )}
@@ -643,31 +733,149 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
           </div>
         </section>
 
+        {/* Punições e Advertências Disciplinares */}
+        {penalties.length > 0 && (
+          <section className="p-6 bg-red-950/20 border border-red-900/60 rounded-2xl space-y-4">
+            <div className="flex items-center gap-2 text-red-400 font-black text-lg">
+              <ShieldAlert className="w-6 h-6" />
+              <span>Painel de Punições e Disciplina ({selectedPublicCategory})</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {penalties
+                .filter(p => selectedPublicCategory === 'Geral' || !p.game_category || p.game_category === selectedPublicCategory || selectedPublicCategory === 'Todos')
+                .map((p, idx) => (
+                  <div key={`${p.id}-${idx}`} className="p-3.5 bg-[#080808] border border-red-900/40 rounded-xl flex items-start justify-between gap-3 text-xs">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{p.player_nickname}</span>
+                        <span className="text-[10px] bg-red-900/40 text-red-300 px-2 py-0.5 rounded font-mono font-bold">
+                          -{p.points_deducted} PTS
+                        </span>
+                      </div>
+                      <p className="text-gray-400">{p.reason}</p>
+                      {p.created_at && (
+                        <p className="text-[10px] text-gray-500 font-mono">
+                          {new Date(p.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
+                    </div>
+                    <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
+
         {/* Chaveamentos de Partidas */}
         <section className="space-y-6">
-          <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
-            <Target className="text-[#39FF14] w-7 h-7" /> Chaveamentos e Resultados
-          </h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
+              <Target className="text-[#39FF14] w-7 h-7" /> Chaveamentos e Agenda de Partidas ({selectedPublicCategory})
+            </h2>
+            <span className="text-xs text-gray-400 bg-[#111] px-3 py-1 rounded-full border border-gray-800 font-mono">
+              {filteredMatches.length} confrontos registrados
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {matches.map((m, index) => (
-              <div key={`${m.id}-${index}`} className="p-6 bg-[#111] border border-gray-800 rounded-2xl flex justify-between items-center shadow-md">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-500" />
-                  <span className="font-bold text-white">{m.player1}</span>
+            {filteredMatches.map((m, index) => {
+              const isFinished = m.status === 'Concluído' || m.status === 'Finalizado';
+              const isScheduled = m.status === 'Agendado';
+              const isLive = m.status === 'Em Andamento';
+
+              return (
+                <div key={`${m.id}-${index}`} className="p-6 bg-[#111] border border-gray-800 rounded-2xl flex flex-col justify-between space-y-4 shadow-md hover:border-gray-700 transition relative overflow-hidden">
+                  {/* Phase & Status Header */}
+                  <div className="flex justify-between items-center text-xs border-b border-gray-800/80 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#39FF14] uppercase tracking-wider">{m.game_category || 'Geral'}</span>
+                      {m.phase && (
+                        <span className="text-[11px] bg-gray-900 text-gray-300 px-2 py-0.5 rounded font-medium border border-gray-800">
+                          {m.phase}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                      isLive ? 'bg-amber-950 text-amber-400 border-amber-800 animate-pulse' :
+                      isFinished ? 'bg-green-950 text-green-400 border-green-800' :
+                      'bg-gray-900 text-gray-400 border-gray-800'
+                    }`}>
+                      {m.status}
+                    </span>
+                  </div>
+
+                  {/* Date & Time if scheduled */}
+                  {(m.match_date || m.match_time) && (
+                    <div className="flex items-center gap-3 text-xs text-gray-400 bg-[#080808] p-2.5 rounded-xl border border-gray-850">
+                      {m.match_date && (
+                        <div className="flex items-center gap-1.5 font-mono">
+                          <Calendar className="w-3.5 h-3.5 text-[#39FF14]" />
+                          <span>{m.match_date}</span>
+                        </div>
+                      )}
+                      {m.match_time && (
+                        <div className="flex items-center gap-1.5 font-mono">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{m.match_time}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Players & Score */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <User className={`w-4 h-4 shrink-0 ${m.winner === m.player1 ? 'text-[#39FF14]' : 'text-gray-500'}`} />
+                      <span className={`font-bold text-base truncate ${m.winner === m.player1 ? 'text-[#39FF14]' : 'text-white'}`}>
+                        {m.player1}
+                      </span>
+                    </div>
+
+                    <div className="px-4 py-2 bg-[#050505] rounded-xl border border-gray-800 text-center shadow-inner mx-2 shrink-0">
+                      <span className="text-[#39FF14] font-black text-xl font-mono">{m.score1} x {m.score2}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
+                      <span className={`font-bold text-base truncate text-right ${m.winner === m.player2 ? 'text-[#39FF14]' : 'text-white'}`}>
+                        {m.player2}
+                      </span>
+                      <User className={`w-4 h-4 shrink-0 ${m.winner === m.player2 ? 'text-[#39FF14]' : 'text-gray-500'}`} />
+                    </div>
+                  </div>
+
+                  {/* Winner / Loser / Details */}
+                  {m.winner && m.winner !== 'Empate' && (
+                    <div className="pt-2 border-t border-gray-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full text-[#39FF14] font-black">
+                        🏆 Vencedor: {m.winner}
+                      </span>
+                      {m.loser && (
+                        <span className="text-gray-500 font-medium">
+                          Derrotado: <span className="text-gray-300 font-bold">{m.loser}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {m.winner === 'Empate' && (
+                    <div className="pt-2 border-t border-gray-800/60 text-center">
+                      <span className="text-xs text-gray-400 font-bold">🤝 Partida Empatada</span>
+                    </div>
+                  )}
+
+                  {/* Match Punishment / Notes */}
+                  {m.punishment && (
+                    <div className="p-2.5 bg-red-950/20 border border-red-900/40 rounded-xl text-xs text-red-300 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <span>{m.punishment}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="px-4 py-1.5 bg-[#050505] rounded-xl border border-gray-800 text-center">
-                  <span className="text-[#39FF14] font-black text-lg font-mono">{m.score1} x {m.score2}</span>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase">{m.status}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-white">{m.player2}</span>
-                  <User className="w-4 h-4 text-gray-500" />
-                </div>
-              </div>
-            ))}
-            {matches.length === 0 && (
+              );
+            })}
+            {filteredMatches.length === 0 && (
               <div className="col-span-2 p-8 bg-[#111] border border-gray-800 rounded-2xl text-center text-gray-500 italic">
-                Nenhum chaveamento cadastrado ainda.
+                Nenhum chaveamento cadastrado para esta categoria ainda.
               </div>
             )}
           </div>
