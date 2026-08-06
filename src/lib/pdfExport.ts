@@ -289,13 +289,14 @@ export async function generateMultipleVipCardsPDF(members: any[]) {
   for (let i = 0; i < members.length; i += cardsPerPage) {
     if (i > 0) doc.addPage();
     const pageMembers = members.slice(i, i + cardsPerPage);
-    pageMembers.forEach((member, index) => {
+    for (const member of pageMembers) {
+      const index = pageMembers.indexOf(member);
       const row = index;
       const x = 19;
       const y = 10 + row * 55;
       
       // Front and Back side-by-side
-      drawCardFront(doc, member, x, y);
+      await drawCardFront(doc, member, x, y);
       
       // Minimal fold line
       doc.setDrawColor(200, 200, 200);
@@ -303,8 +304,8 @@ export async function generateMultipleVipCardsPDF(members: any[]) {
       doc.line(x + 85.6, y, x + 85.6, y + 53.98);
       doc.setLineDash([], 0);
       
-      drawCardBack(doc, member, x + 85.6, y);
-    });
+      await drawCardBack(doc, member, x + 85.6, y);
+    }
   }
 
   doc.save(`Carteirinhas_VIP_SideBySide_${Date.now()}.pdf`);
@@ -321,36 +322,74 @@ export async function generateDoubleSidedVipCardsPDF(members: any[]) {
 
   // Fronts on Page 1
   const page1Members = members.slice(0, cardsPerPage);
-  page1Members.forEach((member, index) => {
+  for (const member of page1Members) {
+      const index = page1Members.indexOf(member);
       const col = index % 2;
       const row = Math.floor(index / 2);
       const x = 10 + col * 95;
       const y = 10 + row * 55;
-      drawCardFront(doc, member, x, y);
-  });
+      await drawCardFront(doc, member, x, y);
+  }
 
   // Backs on Page 2
   doc.addPage();
-  page1Members.forEach((member, index) => {
+  for (const member of page1Members) {
+      const index = page1Members.indexOf(member);
       const col = index % 2;
       const row = Math.floor(index / 2);
       const x = 10 + col * 95;
       const y = 10 + row * 55;
-      drawCardBack(doc, member, x, y);
-  });
+      await drawCardBack(doc, member, x, y);
+  }
 
   doc.save(`Carteirinhas_VIP_DoubleSided_${Date.now()}.pdf`);
 }
 
-function drawCardFront(doc: any, member: any, x: number, y: number) {
+
+async function resizeImage(url: string, maxWidth: number, maxHeight: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      const ratio = Math.min(maxWidth / width, maxHeight / height);
+      width = width * ratio;
+      height = height * ratio;
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+async function addResizedImage(doc: any, url: string, format: string, x: number, y: number, w: number, h: number) {
+  try {
+    const resizedUrl = await resizeImage(url, w * 4, h * 4); // Resize to 4x display size for quality
+    doc.addImage(resizedUrl, format, x, y, w, h);
+  } catch (e) {
+    // If resize fails, try original
+    try {
+        doc.addImage(url, format, x, y, w, h);
+    } catch (e2) {
+        console.error("Failed to add image", e2);
+    }
+  }
+}
+
+async function drawCardFront(doc: any, member: any, x: number, y: number) {
   // Background
   if (member.background_image_url) {
-    try {
-      doc.addImage(member.background_image_url, 'JPEG', x, y, 85.6, 53.98);
-    } catch (e) {
-      doc.setFillColor(15, 15, 15);
-      doc.rect(x, y, 85.6, 53.98, 'F');
-    }
+    await addResizedImage(doc, member.background_image_url, 'JPEG', x, y, 85.6, 53.98);
   } else {
     doc.setFillColor(15, 15, 15);
     doc.rect(x, y, 85.6, 53.98, 'F');
@@ -371,9 +410,7 @@ function drawCardFront(doc: any, member: any, x: number, y: number) {
 
   // Avatar
   if (member.image_url) {
-    try {
-      doc.addImage(member.image_url, 'JPEG', x + 5, y + 12, 20, 20);
-    } catch (e) {}
+    await addResizedImage(doc, member.image_url, 'JPEG', x + 5, y + 12, 20, 20);
   }
 
   // Details
@@ -397,22 +434,12 @@ function drawCardFront(doc: any, member: any, x: number, y: number) {
   doc.text(`@CyberPlay | ${member.social_media || ''}`, x + 42.8, y + 50, { align: 'center' });
 }
 
-function drawCardBack(doc: any, member: any, x: number, y: number) {
+async function drawCardBack(doc: any, member: any, x: number, y: number) {
     // Back side - Simple gamer aesthetic
     if (member.background_back_image_url) {
-      try {
-        doc.addImage(member.background_back_image_url, 'JPEG', x, y, 85.6, 53.98);
-      } catch (e) {
-        doc.setFillColor(15, 15, 15);
-        doc.rect(x, y, 85.6, 53.98, 'F');
-      }
+      await addResizedImage(doc, member.background_back_image_url, 'JPEG', x, y, 85.6, 53.98);
     } else if (member.background_image_url) {
-      try {
-        doc.addImage(member.background_image_url, 'JPEG', x, y, 85.6, 53.98);
-      } catch (e) {
-        doc.setFillColor(15, 15, 15);
-        doc.rect(x, y, 85.6, 53.98, 'F');
-      }
+      await addResizedImage(doc, member.background_image_url, 'JPEG', x, y, 85.6, 53.98);
     } else {
         doc.setFillColor(15, 15, 15);
         doc.rect(x, y, 85.6, 53.98, 'F');
@@ -422,13 +449,9 @@ function drawCardBack(doc: any, member: any, x: number, y: number) {
     doc.setLineWidth(0.8);
     doc.rect(x + 2, y + 2, 81.6, 49.98);
 
-    doc.setTextColor(57, 255, 20);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.text('CYBER PLAY', x + 42.8, y + 26, { align: 'center' });
-    
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
     doc.text('VIP MEMBER', x + 42.8, y + 33, { align: 'center' });
 }
+
 
