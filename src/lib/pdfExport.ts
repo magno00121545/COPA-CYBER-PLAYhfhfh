@@ -22,17 +22,17 @@ export async function generateSocialMediaPDF() {
     return (b.wins || 0) - (a.wins || 0);
   });
 
-  // Background Dark Theme header
-  doc.setFillColor(15, 15, 15); // Darker background
-  doc.rect(0, 0, 210, 297, 'F'); // Fill entire page with dark background
+  // Background Light Theme
+  doc.setFillColor(245, 245, 245); // Light gray background
+  doc.rect(0, 0, 210, 297, 'F');
 
   // Title
-  doc.setTextColor(57, 255, 20); // #39FF14 Neon Green
+  doc.setTextColor(0, 100, 0); // Darker Green
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(24);
   doc.text('CYBER PLAY ESPORTS', 14, 20);
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(50, 50, 50); // Dark Gray
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text('CLASSIFICAÇÃO GERAL & CHAVEAMENTOS', 14, 28);
@@ -44,14 +44,14 @@ export async function generateSocialMediaPDF() {
     hour: '2-digit',
     minute: '2-digit',
   });
-  doc.setTextColor(150, 150, 150);
+  doc.setTextColor(100, 100, 100);
   doc.setFontSize(9);
   doc.text(`Atualizado em: ${currentDate}`, 14, 35);
 
   let currentY = 48;
 
   // SECTION 1: CLASSIFICAÇÃO
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text('🏆 TABELA DE CLASSIFICAÇÃO', 14, currentY);
@@ -77,31 +77,31 @@ export async function generateSocialMediaPDF() {
     body: rankingRows.length > 0 ? rankingRows : [['-', 'Nenhum jogador classificado', '-', '-', '-', '-', '-', '-']],
     theme: 'grid',
     headStyles: {
-      fillColor: [30, 30, 30],
-      textColor: [57, 255, 20],
+      fillColor: [220, 220, 220],
+      textColor: [0, 80, 0],
       fontStyle: 'bold',
       halign: 'center',
-      lineColor: [50, 50, 50],
+      lineColor: [200, 200, 200],
       lineWidth: 0.1
     },
     bodyStyles: {
-      fillColor: [20, 20, 20],
-      textColor: [200, 200, 200],
-      lineColor: [50, 50, 50],
+      fillColor: [255, 255, 255],
+      textColor: [50, 50, 50],
+      lineColor: [200, 200, 200],
       lineWidth: 0.1
     },
     columnStyles: {
-      0: { halign: 'center', fontStyle: 'bold', cellWidth: 16, textColor: [255, 255, 255] },
-      1: { fontStyle: 'bold', textColor: [255, 255, 255] },
+      0: { halign: 'center', fontStyle: 'bold', cellWidth: 16 },
+      1: { fontStyle: 'bold' },
       2: { halign: 'center', cellWidth: 16 },
-      3: { halign: 'center', textColor: [34, 197, 94], cellWidth: 16 },
-      4: { halign: 'center', textColor: [156, 163, 175], cellWidth: 16 },
-      5: { halign: 'center', textColor: [239, 68, 68], cellWidth: 16 },
+      3: { halign: 'center', cellWidth: 16 },
+      4: { halign: 'center', cellWidth: 16 },
+      5: { halign: 'center', cellWidth: 16 },
       6: { halign: 'center', cellWidth: 22 },
-      7: { halign: 'right', fontStyle: 'bold', textColor: [16, 185, 129], cellWidth: 26 },
+      7: { halign: 'right', fontStyle: 'bold', cellWidth: 26 },
     },
     alternateRowStyles: {
-      fillColor: [25, 25, 25],
+      fillColor: [240, 240, 240],
     },
     margin: { left: 14, right: 14 },
   });
@@ -111,12 +111,12 @@ export async function generateSocialMediaPDF() {
   // SECTION 2: CHAVEAMENTOS / CONFRONTOS
   if (currentY > 230) {
     doc.addPage();
-    doc.setFillColor(15, 15, 15);
+    doc.setFillColor(245, 245, 245);
     doc.rect(0, 0, 210, 297, 'F');
     currentY = 20;
   }
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text('⚔️ CHAVEAMENTOS E CONFRONTOS', 14, currentY);
@@ -133,27 +133,27 @@ export async function generateSocialMediaPDF() {
     body: matchRows.length > 0 ? matchRows : [['-', 'vs', '-', 'Nenhum confronto']],
     theme: 'grid',
     headStyles: {
-      fillColor: [30, 30, 30],
-      textColor: [57, 255, 20],
+      fillColor: [220, 220, 220],
+      textColor: [0, 80, 0],
       fontStyle: 'bold',
       halign: 'center',
-      lineColor: [50, 50, 50],
+      lineColor: [200, 200, 200],
       lineWidth: 0.1
     },
     bodyStyles: {
-      fillColor: [20, 20, 20],
-      textColor: [200, 200, 200],
-      lineColor: [50, 50, 50],
+      fillColor: [255, 255, 255],
+      textColor: [50, 50, 50],
+      lineColor: [200, 200, 200],
       lineWidth: 0.1
     },
     columnStyles: {
-      0: { halign: 'center', fontStyle: 'bold', textColor: [255, 255, 255] },
-      1: { halign: 'center', fontStyle: 'bold', textColor: [57, 255, 20] },
-      2: { halign: 'center', fontStyle: 'bold', textColor: [255, 255, 255] },
-      3: { halign: 'center', textColor: [150, 150, 150] },
+      0: { halign: 'center', fontStyle: 'bold' },
+      1: { halign: 'center', fontStyle: 'bold', textColor: [0, 80, 0] },
+      2: { halign: 'center', fontStyle: 'bold' },
+      3: { halign: 'center', textColor: [100, 100, 100] },
     },
     alternateRowStyles: {
-      fillColor: [25, 25, 25],
+      fillColor: [240, 240, 240],
     },
     margin: { left: 14, right: 14 },
   });
@@ -162,18 +162,18 @@ export async function generateSocialMediaPDF() {
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFillColor(10, 10, 10);
+    doc.setFillColor(220, 220, 220); // Light footer
     doc.rect(0, 280, 210, 17, 'F');
-    doc.setTextColor(200, 200, 200);
+    doc.setTextColor(50, 50, 50);
     doc.setFontSize(8);
     doc.text('CYBER PLAY ESPORTS — DOCUMENTO OFICIAL PARA REDES SOCIAIS', 14, 286);
     
     // Creator watermark
-    doc.setTextColor(57, 255, 20); // Neon Green
+    doc.setTextColor(0, 100, 0); // Darker Green
     doc.setFont('helvetica', 'bold');
     doc.text('Criado por MAGNO THIAGO CYBER GHOST', 14, 292);
     
-    doc.setTextColor(200, 200, 200);
+    doc.setTextColor(50, 50, 50);
     doc.setFont('helvetica', 'normal');
     doc.text(`Página ${i} de ${pageCount}`, 180, 286);
   }
@@ -190,22 +190,27 @@ export async function generateRegistrationReceiptPDF(registration: any, tourname
   });
 
   // Background
-  doc.setFillColor(15, 15, 15);
+  doc.setFillColor(245, 245, 245);
   doc.rect(0, 0, 148, 210, 'F');
+  
+  // Border
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(1);
+  doc.rect(5, 5, 138, 200);
 
   // Title
-  doc.setTextColor(57, 255, 20);
+  doc.setTextColor(0, 100, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.text('CYBER PLAY ESPORTS', 14, 20);
   
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(50, 50, 50);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text('COMPROVANTE DE INSCRIÇÃO', 14, 28);
   
   // Line separator
-  doc.setDrawColor(57, 255, 20);
+  doc.setDrawColor(0, 100, 0);
   doc.setLineWidth(0.5);
   doc.line(14, 32, 134, 32);
   
@@ -214,13 +219,13 @@ export async function generateRegistrationReceiptPDF(registration: any, tourname
   
   const addField = (label: string, value: string) => {
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(150, 150, 150);
+    doc.setTextColor(100, 100, 100);
     doc.setFontSize(10);
     doc.text(label, 14, currentY);
     
     currentY += 5;
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
     doc.text(value, 14, currentY);
     currentY += 10;
@@ -239,17 +244,17 @@ export async function generateRegistrationReceiptPDF(registration: any, tourname
   // Footer message
   currentY += 10;
   doc.setFont('helvetica', 'italic');
-  doc.setTextColor(57, 255, 20);
+  doc.setTextColor(0, 100, 0);
   doc.setFontSize(9);
   const msg = registration.status === 'Confirmado' 
     ? 'Inscrição confirmada. Boa sorte no torneio!' 
     : 'Aguardando pagamento / validação.';
   doc.text(msg, 14, currentY);
   
-  doc.setFillColor(10, 10, 10);
+  doc.setFillColor(220, 220, 220);
   doc.rect(0, 195, 148, 15, 'F');
   
-  doc.setTextColor(57, 255, 20);
+  doc.setTextColor(0, 100, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
   doc.text('Criado por MAGNO THIAGO CYBER GHOST', 14, 202);

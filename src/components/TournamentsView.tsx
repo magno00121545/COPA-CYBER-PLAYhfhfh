@@ -8,6 +8,7 @@ export default function TournamentsView() {
   const [name, setName] = useState('');
   const [maxSpots, setMaxSpots] = useState('');
   const [paymentInfo, setPaymentInfo] = useState('');
+  const [game, setGame] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -28,15 +29,17 @@ export default function TournamentsView() {
     const { error } = await supabase.from('tournaments').insert([{ 
       name, 
       status: 'Inscrições abertas',
-      max_spots: parseInt(maxSpots),
+      max_spots: parseInt(maxSpots) || 0,
       current_spots: 0,
-      payment_info: paymentInfo
+      payment_info: paymentInfo,
+      game
     }]);
     if (error) console.error('Error adding tournament:', error);
     else {
       setName('');
       setMaxSpots('');
       setPaymentInfo('');
+      setGame('');
       fetchTournaments();
     }
     setLoading(false);
@@ -51,13 +54,20 @@ export default function TournamentsView() {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={addTournament} className="bg-[#111] p-6 rounded-xl border border-gray-800 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <form onSubmit={addTournament} className="bg-[#111] p-6 rounded-xl border border-gray-800 grid grid-cols-1 md:grid-cols-5 gap-4">
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nome do campeonato"
           className="md:col-span-1 bg-black border border-gray-700 p-3 rounded-lg text-white"
+        />
+        <input
+          type="text"
+          value={game}
+          onChange={(e) => setGame(e.target.value)}
+          placeholder="Jogo (ex: EA FC 24, CS2)"
+          className="bg-black border border-gray-700 p-3 rounded-lg text-white"
         />
         <input
           type="number"
@@ -83,10 +93,16 @@ export default function TournamentsView() {
       </form>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tournaments.map((t) => (
-          <div key={t.id} className="bg-[#111] p-6 rounded-xl border border-gray-800 hover:border-[#39FF14]/50 transition-all">
+        {tournaments.map((t, index) => (
+          <div key={`${t.id}-${index}`} className="bg-[#111] p-6 rounded-xl border border-gray-800 hover:border-[#39FF14]/50 transition-all">
             <h4 className="font-black text-lg mb-2">{t.name}</h4>
-            <p className="text-gray-400 text-sm mb-4">{t.status}</p>
+            <p className="text-[#39FF14] text-xs font-bold mb-1">{t.game || 'Não especificado'}</p>
+            <p className="text-gray-400 text-sm mb-4">
+              {t.status} 
+              <span className="block text-xs mt-1">
+                Vagas: {t.max_spots > 0 ? (t.max_spots - t.current_spots) : 'Ilimitadas'}
+              </span>
+            </p>
             <div className="flex gap-2">
               <button onClick={() => deleteTournament(t.id)} className="flex-1 bg-red-900 text-white py-2 rounded text-xs font-bold hover:bg-red-800">EXCLUIR</button>
               <button className="flex-1 bg-[#39FF14]/10 text-[#39FF14] py-2 rounded text-xs font-bold border border-[#39FF14]/20 hover:bg-[#39FF14]/20">GERIR</button>

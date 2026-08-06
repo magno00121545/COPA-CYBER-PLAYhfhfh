@@ -21,6 +21,7 @@ export default function App() {
   const [view, setView] = useState<'public' | 'admin'>('public');
   const [activeTab, setActiveTab] = useState('Painel');
   const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('isAdmin') === 'true');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { loading } = useAuth();
 
   useEffect(() => {
@@ -66,13 +67,22 @@ export default function App() {
   };
 
   return (
-    <div className="bg-[#050505] text-white min-h-screen flex font-sans">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="bg-[#050505] text-white min-h-screen w-full flex font-sans overflow-x-hidden">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+      />
       
-      <main className="flex-1 flex flex-col">
-        <Header activeTab={activeTab} onLogout={handleLogout} />
+      <main className="flex-1 flex flex-col w-full min-w-0">
+        <Header 
+          activeTab={activeTab} 
+          onLogout={handleLogout} 
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
+        />
 
-        <div className="p-8 flex flex-col gap-6">
+        <div className="p-4 sm:p-8 flex flex-col gap-6 w-full">
           <h2 className="text-2xl font-black">{activeTab}</h2>
           
           {renderView()}

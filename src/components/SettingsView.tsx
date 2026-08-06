@@ -15,6 +15,7 @@ export default function SettingsView() {
   const [pixKey, setPixKey] = useState('');
   const [pixName, setPixName] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [whatsappGroupLink, setWhatsappGroupLink] = useState('');
   const [pixInstructions, setPixInstructions] = useState('');
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [saved, setSaved] = useState(false);
@@ -38,6 +39,7 @@ export default function SettingsView() {
       setPixKey(data.pixKey || '');
       setPixName(data.pixName || '');
       setWhatsappNumber(data.whatsappNumber || '');
+      setWhatsappGroupLink(data.whatsappGroupLink || '');
       setPixInstructions(data.pixInstructions || '');
       setSponsors(data.sponsors || []);
     }
@@ -49,6 +51,7 @@ export default function SettingsView() {
       pixKey,
       pixName,
       whatsappNumber,
+      whatsappGroupLink,
       pixInstructions,
       sponsors
     }).eq('id', 'global');
@@ -60,9 +63,10 @@ export default function SettingsView() {
             pixKey,
             pixName,
             whatsappNumber,
-            pixInstructions,
-            sponsors
-        });
+      whatsappGroupLink,
+      pixInstructions,
+      sponsors
+    });
     }
 
     setSaved(true);
@@ -223,6 +227,23 @@ export default function SettingsView() {
             Seu número aparecerá na tela inicial junto a um <strong>QR Code exclusivo do WhatsApp</strong> e um botão direto para os jogadores enviarem comprovantes e tirarem dúvidas!
           </p>
         </div>
+        <div className="p-4 bg-emerald-950/30 border border-emerald-500/40 rounded-xl space-y-3 mt-4">
+          <label className="block text-sm font-bold text-emerald-400 flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 text-emerald-400 fill-emerald-950" />
+            Link do Grupo do WhatsApp (Comunidade / Torneios)
+          </label>
+          <input
+            type="text"
+            placeholder="Ex: https://chat.whatsapp.com/..."
+            value={whatsappGroupLink}
+            onChange={(e) => setWhatsappGroupLink(e.target.value)}
+            className="w-full bg-[#050505] border border-emerald-700/60 p-3 rounded-lg text-white focus:outline-none focus:border-[#39FF14]"
+          />
+          <p className="text-xs text-emerald-300/80 leading-relaxed">
+            Se preenchido, os jogadores poderão entrar no grupo diretamente pela página inicial.
+          </p>
+        </div>
+
 
         <div>
           <label className="block text-sm font-bold text-gray-300 mb-2">Instruções para o Participante</label>
@@ -408,6 +429,25 @@ export default function SettingsView() {
                   <p className="text-[10px] text-gray-500 font-bold uppercase">Número de Contato</p>
                   <p className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/40 px-3 py-1 rounded border border-emerald-800/60">
                     {whatsappNumber}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {whatsappGroupLink && (
+              <div className="flex flex-col items-center p-4 bg-[#050505] rounded-xl border border-emerald-900/60 text-center space-y-3">
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <MessageCircle className="w-4 h-4" /> Grupo do WhatsApp
+                </span>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(whatsappGroupLink)}`}
+                  alt="QR Code Grupo WhatsApp"
+                  className="w-36 h-36 bg-white p-2 rounded-lg border border-emerald-500/50 object-contain"
+                />
+                <div className="space-y-1">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">Link do Grupo</p>
+                  <p className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/40 px-3 py-1 rounded border border-emerald-800/60 truncate max-w-[150px]">
+                    {whatsappGroupLink}
                   </p>
                 </div>
               </div>

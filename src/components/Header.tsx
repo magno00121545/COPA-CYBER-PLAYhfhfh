@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Download, LogOut } from 'lucide-react';
+import { Download, LogOut, Menu } from 'lucide-react';
 import { generateSocialMediaPDF } from '../lib/pdfExport';
 import { exportDatabaseJSON } from '../lib/supabase';
 
 interface HeaderProps {
   activeTab: string;
   onLogout?: () => void;
+  onToggleSidebar: () => void;
 }
 
-export default function Header({ activeTab, onLogout }: HeaderProps) {
+export default function Header({ activeTab, onLogout, onToggleSidebar }: HeaderProps) {
   const [exporting, setExporting] = useState(false);
 
   async function handleExportPDF() {
@@ -24,29 +25,32 @@ export default function Header({ activeTab, onLogout }: HeaderProps) {
   }
 
   return (
-    <header className="h-16 border-b border-gray-800/50 flex items-center justify-between px-8 bg-[#0a0a0a]/50 backdrop-blur-xl">
+    <header className="h-16 border-b border-gray-800/50 flex items-center justify-between px-4 sm:px-8 bg-[#0a0a0a]/50 backdrop-blur-xl">
       <div className="flex items-center space-x-4">
-        <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Painel Administrativo</span>
-        <span className="text-gray-700">/</span>
+        <button onClick={onToggleSidebar} className="md:hidden p-2 text-gray-400 hover:text-white">
+          <Menu className="w-6 h-6" />
+        </button>
+        <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold hidden sm:inline">Painel Administrativo</span>
+        <span className="text-gray-700 hidden sm:inline">/</span>
         <span className="text-sm font-medium">{activeTab}</span>
       </div>
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2 sm:space-x-4">
         <button
           onClick={handleExportPDF}
           disabled={exporting}
-          className="bg-[#39FF14]/10 hover:bg-[#39FF14] text-[#39FF14] hover:text-black border border-[#39FF14]/40 font-bold px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer flex items-center gap-2"
+          className="bg-[#39FF14]/10 hover:bg-[#39FF14] text-[#39FF14] hover:text-black border border-[#39FF14]/40 font-bold px-3 py-1.5 rounded-lg text-[10px] sm:text-xs transition cursor-pointer flex items-center gap-2"
         >
           {exporting ? (
-            <>Gerando PDF...</>
+            <>Gerando...</>
           ) : (
             <>
               <Download className="w-3.5 h-3.5" />
-              <span>PDF para Redes Sociais</span>
+              <span className="hidden sm:inline">PDF Redes Sociais</span>
             </>
           )}
         </button>
 
-        <div className="text-right">
+        <div className="text-right hidden sm:block">
           <p className="text-xs font-bold">Administrador</p>
           <p className="text-[10px] text-[#39FF14]">Super Administrador</p>
         </div>

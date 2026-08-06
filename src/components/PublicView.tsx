@@ -19,6 +19,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
   const [pixKey, setPixKey] = useState('pix@cyberplay.com');
   const [pixName, setPixName] = useState('Cyberplay Torneios');
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [whatsappGroupLink, setWhatsappGroupLink] = useState('');
   const [pixInstructions, setPixInstructions] = useState('Faça o pagamento via PIX e envie o comprovante pelo WhatsApp.');
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixKey)}`;
@@ -56,6 +57,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
       setPixKey(data.pixKey || 'pix@cyberplay.com');
       setPixName(data.pixName || 'Cyberplay Torneios');
       setWhatsappNumber(data.whatsappNumber || '');
+      setWhatsappGroupLink(data.whatsappGroupLink || '');
       setPixInstructions(data.pixInstructions || 'Faça o pagamento via PIX e envie o comprovante pelo WhatsApp.');
       setSponsors(data.sponsors || []);
     }
@@ -157,9 +159,22 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
             SISTEMA PARTICIPANTE
           </span>
         </div>
-        <button onClick={onGoToAdmin} className="text-gray-400 hover:text-[#39FF14] text-xs font-bold uppercase transition flex items-center gap-1.5 cursor-pointer">
-          <ShieldCheck className="w-4 h-4" /> Area do Administrador
-        </button>
+        <div className="flex items-center gap-4">
+          {whatsappGroupLink && (
+            <a 
+              href={whatsappGroupLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <MessageCircle className="w-4 h-4 fill-current" />
+              <span className="hidden sm:inline">Entrar no Grupo</span>
+            </a>
+          )}
+          <button onClick={onGoToAdmin} className="text-gray-400 hover:text-[#39FF14] text-xs font-bold uppercase transition flex items-center gap-1.5 cursor-pointer">
+            <ShieldCheck className="w-4 h-4" /> <span className="hidden sm:inline">Area do Administrador</span>
+          </button>
+        </div>
       </header>
       
       <main className="p-4 sm:p-8 max-w-7xl mx-auto space-y-12">
@@ -251,6 +266,22 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                   <p className="text-[11px] text-emerald-400 font-bold uppercase tracking-wider">Escanear WhatsApp</p>
                 </div>
               )}
+              {/* QR Code Group */}
+              {whatsappGroupLink && (
+                <div className="flex flex-col items-center bg-[#050505] p-5 rounded-2xl border border-blue-900/60 shadow-xl space-y-2">
+                  <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 rounded flex items-center gap-1">
+                    <MessageCircle className="w-3 h-3 fill-current" /> GRUPO ZAP
+                  </span>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(whatsappGroupLink)}`}
+                    alt="QR Code do Grupo"
+                    className="w-40 h-40 bg-white p-2 rounded-xl border border-blue-500/50 object-contain shadow-inner"
+                  />
+                  <a href={whatsappGroupLink} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 font-bold uppercase tracking-wider hover:underline">
+                    Entrar no Grupo
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -319,8 +350,8 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
                 className="w-full bg-[#050505] border border-gray-700 p-3.5 rounded-xl text-white text-sm focus:outline-none focus:border-[#39FF14] transition cursor-pointer"
               >
                 {tournaments.length > 0 ? (
-                  tournaments.map((t) => (
-                    <option key={t.id} value={t.id}>
+                  tournaments.map((t, index) => (
+                    <option key={`${t.id}-${index}`} value={t.id}>
                       {t.name} ({t.max_spots - t.current_spots} vagas restantes — {t.payment_info})
                     </option>
                   ))
@@ -404,8 +435,8 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tournaments.map(t => (
-              <div key={t.id} className="p-6 bg-[#111] border border-gray-800 rounded-2xl space-y-4 hover:border-gray-600 transition shadow-lg flex flex-col justify-between">
+            {tournaments.map((t, index) => (
+              <div key={`${t.id}-${index}`} className="p-6 bg-[#111] border border-gray-800 rounded-2xl space-y-4 hover:border-gray-600 transition shadow-lg flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex justify-between items-start">
                     <span className="font-bold text-lg text-white">{t.name}</span>
@@ -569,7 +600,7 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
 
                     return (
                       <tr 
-                        key={r.id || index} 
+                        key={`${r.id}-${index}`} 
                         className={`hover:bg-[#121212] transition ${pos <= 3 ? 'bg-[#39FF14]/[0.02]' : ''}`}
                       >
                         <td className="p-4 text-center">{posBadge}</td>
@@ -618,8 +649,8 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
             <Target className="text-[#39FF14] w-7 h-7" /> Chaveamentos e Resultados
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {matches.map(m => (
-              <div key={m.id} className="p-6 bg-[#111] border border-gray-800 rounded-2xl flex justify-between items-center shadow-md">
+            {matches.map((m, index) => (
+              <div key={`${m.id}-${index}`} className="p-6 bg-[#111] border border-gray-800 rounded-2xl flex justify-between items-center shadow-md">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-gray-500" />
                   <span className="font-bold text-white">{m.player1}</span>
@@ -660,9 +691,9 @@ export default function PublicView({ onGoToAdmin }: { onGoToAdmin: () => void })
 
           {sponsors.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {sponsors.map((sp: any) => (
+              {sponsors.map((sp: any, index) => (
                 <a
-                  key={sp.id}
+                  key={`${sp.id}-${index}`}
                   href={sp.website || '#'}
                   target={sp.website ? "_blank" : "_self"}
                   rel="noopener noreferrer"

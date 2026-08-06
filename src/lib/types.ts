@@ -5,6 +5,7 @@ export interface Tournament {
   max_spots: number;
   current_spots: number;
   payment_info: string;
+  game?: string;
   created_at?: string;
 }
 

@@ -6,9 +6,11 @@ import { playNewRegistrationSound } from '../lib/audioNotification';
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose }: SidebarProps) {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [isLive, setIsLive] = useState(true);
 
@@ -68,12 +70,22 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-64 bg-[#0a0a0a] border-r border-[#39FF14]/20 flex flex-col">
-      <div className="p-6">
-        <h1 className="text-[#39FF14] text-2xl font-black tracking-tighter">CYBER PLAY</h1>
-        <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Gerenciador de Campeonatos</p>
-      </div>
-      <nav className="flex-1 px-4 space-y-1">
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/30 z-40 md:hidden" onClick={onClose} />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed md:relative inset-y-0 left-0 w-64 bg-[#0a0a0a] border-r border-[#39FF14]/20 flex flex-col z-50 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-[#39FF14] text-2xl font-black tracking-tighter">CYBER PLAY</h1>
+            <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Gerenciador de Campeonatos</p>
+          </div>
+          <button onClick={onClose} className="md:hidden text-gray-500">✕</button>
+        </div>
+        <nav className="flex-1 px-4 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.name;
@@ -84,11 +96,11 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition cursor-pointer ${
                 isActive 
                   ? 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/30 font-bold shadow-sm' 
-                  : 'text-gray-400 hover:text-white border-transparent hover:bg-white/5'
+                  : 'text-gray-300 hover:text-[#39FF14] border-transparent hover:bg-[#39FF14]/5'
               }`}
             >
               <div className="flex items-center space-x-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#39FF14]' : 'text-gray-400'}`} />
                 <span className="text-sm font-medium">{item.name}</span>
               </div>
               {item.badge !== undefined && item.badge > 0 && (
@@ -112,6 +124,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         </div>
       </div>
     </aside>
+    </>
   );
 }
 

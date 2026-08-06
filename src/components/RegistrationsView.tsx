@@ -135,15 +135,18 @@ export default function RegistrationsView() {
       if (reg.tournament_id) {
         const { data: tournament } = await supabase
           .from('tournaments')
-          .select('current_spots')
+          .select('current_spots, max_spots')
           .eq('id', reg.tournament_id)
           .single();
 
         if (tournament) {
-          await supabase
-            .from('tournaments')
-            .update({ current_spots: (tournament.current_spots || 0) + 1 })
-            .eq('id', reg.tournament_id);
+          // Only increment if max_spots is set (i.e., not unlimited)
+          if (tournament.max_spots > 0) {
+            await supabase
+              .from('tournaments')
+              .update({ current_spots: (tournament.current_spots || 0) + 1 })
+              .eq('id', reg.tournament_id);
+          }
         }
       }
 
